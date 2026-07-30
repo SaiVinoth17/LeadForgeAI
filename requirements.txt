@@ -1,0 +1,16 @@
+customtkinter
+playwright
+beautifulsoup4
+requests
+pandas
+openpyxl
+Pillow
+reportlab
+SQLAlchemy
+tkintermapview
+matplotlib
+flask
+flask-cors
+PyJWT
+passlib[bcrypt]
+bcrypt

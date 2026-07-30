@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeadForgeAI — Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<style>
+  :root{
+    --bg:#05070a;
+    --bg-elev:#0a0d13;
+    --panel:rgba(255,255,255,0.035);
+    --panel-hi:rgba(255,255,255,0.06);
+    --border:rgba(255,255,255,0.09);
+    --border-hi:rgba(255,255,255,0.16);
+    --primary:#6e5bff;
+    --primary-soft:#8a7bff;
+    --signal:#00e5ff;
+    --pulse:#39ff88;
+    --warn:#ff5c6c;
+    --text-hi:#eceef5;
+    --text-mid:#98a1b8;
+    --text-low:#565f76;
+    --r-sm:10px;
+    --r-md:16px;
+    --r-lg:24px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:auto;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(110,91,255,0.14), transparent 60%),
+      radial-gradient(900px 500px at 90% 10%, rgba(0,229,255,0.08), transparent 55%),
+      var(--bg);
+    color:var(--text-hi);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+    cursor:default;
+  }
+  .font-display{font-family:'Space Grotesk', sans-serif;}
+  .font-mono{font-family:'JetBrains Mono', monospace;}
+
+  ::-webkit-scrollbar{width:8px; height:8px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12); border-radius:8px;}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.22);}
+
+  a{color:inherit; text-decoration:none;}
+  button{font-family:inherit; cursor:pointer;}
+
+  :focus-visible{outline:2px solid var(--signal); outline-offset:3px; border-radius:4px;}
+
+  /* ---------- layout shell ---------- */
+  .shell{
+    display:grid;
+    grid-template-columns:76px 1fr;
+    min-height:100vh;
+  }
+  @media (max-width: 860px){
+    .shell{grid-template-columns:1fr;}
+    .sidebar{display:none;}
+  }
+
+  /* ---------- sidebar ---------- */
+  .sidebar{
+    border-right:1px solid var(--border);
+    background:rgba(255,255,255,0.015);
+    display:flex; flex-direction:column; align-items:center;
+    padding:22px 0;
+    position:sticky; top:0; height:100vh;
+  }
+  .logo-mark{
+    width:38px; height:38px; border-radius:11px;
+    background:linear-gradient(140deg, var(--primary), var(--signal));
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:15px; color:#05070a;
+    box-shadow:0 0 24px rgba(110,91,255,0.5);
+    margin-bottom:34px;
+  }
+  .nav-icons{display:flex; flex-direction:column; gap:6px; flex:1;}
+  .nav-icon{
+    width:44px; height:44px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--text-low);
+    position:relative;
+    transition:color .25s ease, background .25s ease;
+  }
+  .nav-icon:hover{color:var(--text-hi); background:var(--panel);}
+  .nav-icon.active{color:var(--signal); background:var(--panel-hi);}
+  .nav-icon.active::before{
+    content:''; position:absolute; left:-22px; top:50%; transform:translateY(-50%);
+    width:3px; height:18px; border-radius:3px;
+    background:linear-gradient(var(--primary), var(--signal));
+  }
+  .nav-icon svg{width:19px; height:19px;}
+  .sidebar-foot{
+    width:38px; height:38px; border-radius:50%;
+    background:linear-gradient(140deg,#2a2f45,#1a1d2b);
+    border:1px solid var(--border-hi);
+  }
+
+  /* ---------- main ---------- */
+  .main{padding:22px 28px 80px; max-width:1400px; width:100%; margin:0 auto;}
+  @media (max-width:860px){.main{padding:18px 16px 60px;}}
+
+  /* topbar */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between; gap:20px;
+    padding-bottom:22px;
+  }
+  .search{
+    flex:1; max-width:420px;
+    display:flex; align-items:center; gap:10px;
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:12px; padding:10px 14px;
+    color:var(--text-low); font-size:13px;
+    transition:border-color .25s ease, background .25s ease;
+  }
+  .search:focus-within{border-color:var(--border-hi); background:var(--panel-hi);}
+  .search svg{width:15px; height:15px; flex-shrink:0;}
+  .search input{background:none; border:none; color:var(--text-hi); font-size:13px; width:100%; outline:none;}
+  .search kbd{
+    font-family:'JetBrains Mono'; font-size:10px; color:var(--text-low);
+    border:1px solid var(--border); border-radius:5px; padding:2px 6px;
+  }
+  .topbar-right{display:flex; align-items:center; gap:14px;}
+  .status-pill{
+    display:flex; align-items:center; gap:8px;
+    padding:8px 14px; border-radius:99px;
+    background:rgba(57,255,136,0.07); border:1px solid rgba(57,255,136,0.25);
+    font-family:'JetBrains Mono'; font-size:11px; letter-spacing:.03em; color:var(--pulse);
+  }
+  .status-dot{width:6px; height:6px; border-radius:50%; background:var(--pulse); box-shadow:0 0 8px var(--pulse);}
+  .avatar{
+    width:36px; height:36px; border-radius:10px;
+    background:linear-gradient(140deg,#6e5bff33,#00e5ff22);
+    border:1px solid var(--border-hi);
+  }
+
+  /* hero / signature network viz */
+  .hero{
+    position:relative;
+    border-radius:var(--r-lg);
+    border:1px solid var(--border);
+    background:linear-gradient(160deg, rgba(110,91,255,0.06), rgba(0,229,255,0.02) 60%), var(--bg-elev);
+    padding:44px 40px;
+    overflow:hidden;
+    margin-bottom:24px;
+    display:grid; grid-template-columns:1.1fr 0.9fr; gap:20px; align-items:center;
+  }
+  @media (max-width:860px){.hero{grid-template-columns:1fr; padding:28px 22px;}}
+  .hero-eyebrow{
+    font-family:'JetBrains Mono'; font-size:11px; letter-spacing:.12em; color:var(--signal);
+    display:flex; align-items:center; gap:8px; margin-bottom:16px;
+  }
+  .hero-eyebrow::before{content:''; width:14px; height:1px; background:var(--signal);}
+  .hero h1{
+    font-family:'Space Grotesk'; font-weight:600; font-size:clamp(28px,4vw,44px);
+    line-height:1.08; letter-spacing:-0.02em; margin-bottom:16px;
+  }
+  .hero h1 span{
+    background:linear-gradient(120deg, var(--primary-soft), var(--signal));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .hero p{color:var(--text-mid); font-size:15px; line-height:1.6; max-width:440px; margin-bottom:26px;}
+  .hero-actions{display:flex; gap:12px; flex-wrap:wrap;}
+
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:12px 20px; border-radius:11px; font-size:13.5px; font-weight:600;
+    border:1px solid transparent; transition:transform .2s ease, box-shadow .2s ease, background .2s ease;
+  }
+  .btn-primary{
+    background:linear-gradient(120deg, var(--primary), #8a4dff);
+    color:#fff; box-shadow:0 8px 24px -8px rgba(110,91,255,0.7);
+  }
+  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 12px 28px -6px rgba(110,91,255,0.85);}
+  .btn-ghost{
+    background:var(--panel); border-color:var(--border); color:var(--text-hi);
+  }
+  .btn-ghost:hover{background:var(--panel-hi); border-color:var(--border-hi); transform:translateY(-2px);}
+
+  .hero-viz{position:relative; height:280px;}
+  .hero-viz canvas{width:100%; height:100%; display:block;}
+
+  /* KPI row */
+  .kpi-row{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px;
+  }
+  @media (max-width:860px){.kpi-row{grid-template-columns:repeat(2,1fr);}}
+  .kpi-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:var(--r-md);
+    padding:20px; position:relative; overflow:hidden;
+    transition:border-color .25s ease, transform .25s ease;
+  }
+  .kpi-card:hover{border-color:var(--border-hi); transform:translateY(-3px);}
+  .kpi-card::after{
+    content:''; position:absolute; inset:0; opacity:0; pointer-events:none;
+    background:radial-gradient(180px 120px at var(--mx,50%) var(--my,0%), rgba(110,91,255,0.16), transparent 70%);
+    transition:opacity .3s ease;
+  }
+  .kpi-card:hover::after{opacity:1;}
+  .kpi-label{font-family:'JetBrains Mono'; font-size:10.5px; letter-spacing:.08em; color:var(--text-low); text-transform:uppercase; margin-bottom:12px;}
+  .kpi-value{font-family:'Space Grotesk'; font-size:32px; font-weight:600; letter-spacing:-0.01em;}
+  .kpi-delta{font-family:'JetBrains Mono'; font-size:11.5px; margin-top:8px; display:flex; align-items:center; gap:5px;}
+  .kpi-delta.up{color:var(--pulse);}
+  .kpi-delta.down{color:var(--warn);}
+
+  /* content grid */
+  .content-grid{display:grid; grid-template-columns:1.4fr 1fr; gap:16px;}
+  @media (max-width:980px){.content-grid{grid-template-columns:1fr;}}
+
+  .panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:var(--r-lg);
+    padding:22px; margin-bottom:16px;
+  }
+  .panel-head{display:flex; align-items:center; justify-content:between; justify-content:space-between; margin-bottom:18px;}
+  .panel-title{font-family:'Space Grotesk'; font-size:16px; font-weight:600;}
+  .panel-sub{font-size:12px; color:var(--text-low); margin-top:3px;}
+  .link-more{font-family:'JetBrains Mono'; font-size:11px; color:var(--signal);}
+
+  /* live feed */
+  .feed-row{
+    display:grid; grid-template-columns:auto 1fr auto auto; gap:14px; align-items:center;
+    padding:13px 12px; border-radius:11px;
+    border-bottom:1px solid var(--border);
+  }
+  .feed-row:last-child{border-bottom:none;}
+  .feed-row:hover{background:rgba(255,255,255,0.02);}
+  .feed-avatar{
+    width:34px; height:34px; border-radius:9px; flex-shrink:0;
+    background:linear-gradient(140deg, rgba(110,91,255,.35), rgba(0,229,255,.2));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk'; font-size:12px; font-weight:600; color:#fff;
+  }
+  .feed-name{font-size:13.5px; font-weight:600;}
+  .feed-meta{font-family:'JetBrains Mono'; font-size:11px; color:var(--text-low); margin-top:2px;}
+  .feed-score{
+    font-family:'JetBrains Mono'; font-size:11px; padding:4px 9px; border-radius:99px;
+  }
+  .score-hot{background:rgba(57,255,136,0.1); color:var(--pulse); border:1px solid rgba(57,255,136,0.25);}
+  .score-warm{background:rgba(0,229,255,0.1); color:var(--signal); border:1px solid rgba(0,229,255,0.25);}
+  .feed-time{font-family:'JetBrains Mono'; font-size:11px; color:var(--text-low); white-space:nowrap;}
+
+  /* scraper control panel */
+  .field-label{font-size:12px; color:var(--text-mid); margin-bottom:7px; display:block;}
+  .field{
+    width:100%; background:var(--bg-elev); border:1px solid var(--border); border-radius:10px;
+    padding:11px 13px; color:var(--text-hi); font-size:13.5px; margin-bottom:16px; outline:none;
+    transition:border-color .2s ease;
+  }
+  .field:focus{border-color:var(--signal);}
+  .source-chips{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;}
+  .chip{
+    padding:8px 13px; border-radius:99px; font-size:12px; border:1px solid var(--border);
+    color:var(--text-mid); transition:all .2s ease;
+  }
+  .chip.selected{background:rgba(110,91,255,0.14); border-color:var(--primary-soft); color:#fff;}
+  .chip:hover{border-color:var(--border-hi);}
+
+  .progress-track{
+    height:6px; border-radius:99px; background:rgba(255,255,255,0.06); overflow:hidden; margin-top:18px;
+  }
+  .progress-fill{
+    height:100%; border-radius:99px;
+    background:linear-gradient(90deg, var(--primary), var(--signal));
+    width:0%;
+  }
+  .progress-caption{
+    display:flex; justify-content:space-between; margin-top:8px;
+    font-family:'JetBrains Mono'; font-size:10.5px; color:var(--text-low);
+  }
+
+  /* radar node mini viz inside panel */
+  .node-list{display:flex; flex-direction:column; gap:10px;}
+  .node-item{display:flex; align-items:center; gap:10px; font-family:'JetBrains Mono'; font-size:11.5px; color:var(--text-mid);}
+  .node-dot{width:7px; height:7px; border-radius:50%; background:var(--signal); box-shadow:0 0 6px var(--signal); flex-shrink:0;}
+
+  .reveal{opacity:0; transform:translateY(24px);}
+
+  /* magnetic cursor glow */
+  .glow-cursor{
+    position:fixed; width:420px; height:420px; border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle, rgba(110,91,255,0.06), transparent 70%);
+    transform:translate(-50%,-50%); z-index:0; left:-500px; top:-500px;
+  }
+</style>
+</head>
+<body>
+
+<div class="glow-cursor" id="cursorGlow"></div>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo-mark font-display">LF</div>
+    <nav class="nav-icons">
+      <a class="nav-icon active" href="#" aria-label="Dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+      </a>
+      <a class="nav-icon" href="#" aria-label="Leads">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.5"/><path d="M5 21c0-4 3-6 7-6s7 2 7 6"/></svg>
+      </a>
+      <a class="nav-icon" href="#" aria-label="Scrapers">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+      </a>
+      <a class="nav-icon" href="#" aria-label="Analytics">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
+      </a>
+      <a class="nav-icon" href="#" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c.36.19.77.29 1.19.29H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </a>
+    </nav>
+    <div class="sidebar-foot"></div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" placeholder="Search leads, domains, campaigns…" />
+        <kbd>⌘K</kbd>
+      </div>
+      <div class="topbar-right">
+        <div class="status-pill"><span class="status-dot"></span> 4 SCRAPERS LIVE</div>
+        <div class="avatar"></div>
+      </div>
+    </div>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div>
+        <div class="hero-eyebrow">SIGNAL ACQUISITION ENGINE</div>
+        <h1 class="font-display">Turn the open web into <span>qualified pipeline.</span></h1>
+        <p>LeadForgeAI crawls, enriches, and scores prospects in real time — surfacing the accounts most likely to convert before your competitors even notice they're in market.</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary" id="runScrapeBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 3l14 9-14 9V3z"/></svg>
+            Run new scrape
+          </button>
+          <button class="btn btn-ghost">View pipeline</button>
+        </div>
+      </div>
+      <div class="hero-viz">
+        <canvas id="networkCanvas"></canvas>
+      </div>
+    </section>
+
+    <!-- KPI ROW -->
+    <section class="kpi-row">
+      <div class="kpi-card reveal" data-tilt>
+        <div class="kpi-label">Leads forged today</div>
+        <div class="kpi-value font-display" data-count="1284">0</div>
+        <div class="kpi-delta up">▲ 18.4% vs yesterday</div>
+      </div>
+      <div class="kpi-card reveal" data-tilt>
+        <div class="kpi-label">Active scrapers</div>
+        <div class="kpi-value font-display" data-count="4">0</div>
+        <div class="kpi-delta up">▲ 2 launched this hour</div>
+      </div>
+      <div class="kpi-card reveal" data-tilt>
+        <div class="kpi-label">Enrichment accuracy</div>
+        <div class="kpi-value font-display" data-count="97">0<span style="font-size:18px;">%</span></div>
+        <div class="kpi-delta up">▲ 1.2pt this week</div>
+      </div>
+      <div class="kpi-card reveal" data-tilt>
+        <div class="kpi-label">Credits remaining</div>
+        <div class="kpi-value font-display" data-count="8420">0</div>
+        <div class="kpi-delta down">▼ 640 used today</div>
+      </div>
+    </section>
+
+    <!-- CONTENT GRID -->
+    <section class="content-grid">
+      <!-- LIVE LEAD FEED -->
+      <div>
+        <div class="panel reveal">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title font-display">Live lead stream</div>
+              <div class="panel-sub">Newest qualified prospects, ranked by intent score</div>
+            </div>
+            <a class="link-more" href="#">VIEW ALL →</a>
+          </div>
+
+          <div class="feed-row">
+            <div class="feed-avatar">MK</div>
+            <div>
+              <div class="feed-name">Maren Koll · Northwind Robotics</div>
+              <div class="feed-meta">VP Growth · northwindrobotics.io</div>
+            </div>
+            <div class="feed-score score-hot">96 HOT</div>
+            <div class="feed-time">12s ago</div>
+          </div>
+          <div class="feed-row">
+            <div class="feed-avatar">DP</div>
+            <div>
+              <div class="feed-name">Devon Patel · Aurora Cloud Systems</div>
+              <div class="feed-meta">Head of RevOps · auroracloud.dev</div>
+            </div>
+            <div class="feed-score score-hot">91 HOT</div>
+            <div class="feed-time">48s ago</div>
+          </div>
+          <div class="feed-row">
+            <div class="feed-avatar">SL</div>
+            <div>
+              <div class="feed-name">Sasha Lindqvist · Vantage Analytics</div>
+              <div class="feed-meta">Founder · vantageanalytics.co</div>
+            </div>
+            <div class="feed-score score-warm">78 WARM</div>
+            <div class="feed-time">2m ago</div>
+          </div>
+          <div class="feed-row">
+            <div class="feed-avatar">RB</div>
+            <div>
+              <div class="feed-name">Rahul Bose · Ferrovia Logistics</div>
+              <div class="feed-meta">Director of Ops · ferrovia.com</div>
+            </div>
+            <div class="feed-score score-warm">73 WARM</div>
+            <div class="feed-time">4m ago</div>
+          </div>
+          <div class="feed-row">
+            <div class="feed-avatar">EC</div>
+            <div>
+              <div class="feed-name">Elin Carrasco · Meridian Biotech</div>
+              <div class="feed-meta">CTO · meridianbio.io</div>
+            </div>
+            <div class="feed-score score-hot">88 HOT</div>
+            <div class="feed-time">6m ago</div>
+          </div>
+        </div>
+
+        <div class="panel reveal">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title font-display">Crawl coverage</div>
+              <div class="panel-sub">Sources indexed in the last scrape cycle</div>
+            </div>
+          </div>
+          <div class="node-list">
+            <div class="node-item"><span class="node-dot"></span> linkedin.com/company/* — 2,481 profiles matched</div>
+            <div class="node-item"><span class="node-dot"></span> crunchbase.com/organization/* — 918 firmographic records</div>
+            <div class="node-item"><span class="node-dot"></span> G2 &amp; Capterra review graphs — intent signals extracted</div>
+            <div class="node-item"><span class="node-dot"></span> Company career pages — hiring-velocity delta computed</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCRAPER CONFIG -->
+      <div>
+        <div class="panel reveal">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title font-display">Launch scraper</div>
+              <div class="panel-sub">Configure a new acquisition run</div>
+            </div>
+          </div>
+          <label class="field-label">Target query</label>
+          <input class="field" type="text" placeholder="e.g. Series B fintech, 50-200 employees" />
+
+          <label class="field-label">Sources</label>
+          <div class="source-chips">
+            <div class="chip selected">LinkedIn</div>
+            <div class="chip selected">Crunchbase</div>
+            <div class="chip">G2</div>
+            <div class="chip">Job boards</div>
+            <div class="chip">Company sites</div>
+          </div>
+
+          <button class="btn btn-primary" style="width:100%; justify-content:center;" id="launchBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 3l14 9-14 9V3z"/></svg>
+            Launch scrape
+          </button>
+
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="progress-caption"><span id="progressLabel">Idle</span><span id="progressPct">0%</span></div>
+        </div>
+
+        <div class="panel reveal">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title font-display">Enrichment queue</div>
+              <div class="panel-sub">Waterfall: verify → firmographic → intent</div>
+            </div>
+          </div>
+          <div class="node-list">
+            <div class="node-item"><span class="node-dot" style="background:var(--pulse); box-shadow:0 0 6px var(--pulse);"></span> Email verification — 412 processed</div>
+            <div class="node-item"><span class="node-dot" style="background:var(--pulse); box-shadow:0 0 6px var(--pulse);"></span> Firmographic match — 388 processed</div>
+            <div class="node-item"><span class="node-dot"></span> Intent scoring — 214 in queue</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+gsap.registerPlugin(ScrollTrigger);
+
+/* ---------------- cursor glow ---------------- */
+const glow = document.getElementById('cursorGlow');
+window.addEventListener('pointermove', (e)=>{
+  gsap.to(glow, {left:e.clientX, top:e.clientY, duration:0.6, ease:'power3.out'});
+});
+
+/* ---------------- kpi card local spotlight ---------------- */
+document.querySelectorAll('.kpi-card').forEach(card=>{
+  card.addEventListener('pointermove', e=>{
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', ((e.clientX-r.left)/r.width*100)+'%');
+    card.style.setProperty('--my', ((e.clientY-r.top)/r.height*100)+'%');
+  });
+});
+
+/* ---------------- page load timeline ---------------- */
+const tl = gsap.timeline({defaults:{ease:'power3.out'}});
+tl.from('.sidebar', {x:-30, opacity:0, duration:0.6})
+  .from('.topbar', {y:-16, opacity:0, duration:0.5}, '-=0.35')
+  .from('.hero', {y:24, opacity:0, duration:0.7}, '-=0.25')
+  .from('.hero-eyebrow', {opacity:0, x:-12, duration:0.4}, '-=0.35')
+  .from('.hero h1', {opacity:0, y:14, duration:0.5}, '-=0.3')
+  .from('.hero p', {opacity:0, y:14, duration:0.5}, '-=0.35')
+  .from('.hero-actions .btn', {opacity:0, y:10, stagger:0.08, duration:0.4}, '-=0.3');
+
+/* count-up KPIs */
+document.querySelectorAll('[data-count]').forEach(el=>{
+  const target = parseFloat(el.getAttribute('data-count'));
+  const suffixEl = el.querySelector('span');
+  const obj = {val:0};
+  gsap.to(obj, {
+    val:target, duration:1.6, ease:'power2.out', delay:0.5,
+    onUpdate:()=>{
+      el.childNodes[0].nodeValue = Math.round(obj.val).toLocaleString();
+    }
+  });
+});
+
+/* scroll reveals */
+gsap.utils.toArray('.reveal').forEach((el, i)=>{
+  gsap.to(el, {
+    opacity:1, y:0, duration:0.7, ease:'power3.out',
+    scrollTrigger:{trigger:el, start:'top 88%'},
+    delay: i * 0.03
+  });
+});
+
+/* feed rows stagger in */
+gsap.from('.feed-row', {
+  opacity:0, x:-14, stagger:0.08, duration:0.5, delay:1.1, ease:'power2.out'
+});
+
+/* ---------------- scraper launch progress demo ---------------- */
+const launchBtn = document.getElementById('launchBtn');
+const runBtn = document.getElementById('runScrapeBtn');
+const fill = document.getElementById('progressFill');
+const label = document.getElementById('progressLabel');
+const pct = document.getElementById('progressPct');
+
+function runProgressDemo(){
+  const stages = ['Connecting to sources…','Crawling target set…','Extracting profiles…','Enriching &amp; scoring…','Complete'];
+  const obj = {v:0};
+  let stageIdx = 0;
+  label.textContent = stages[0];
+  gsap.to(obj, {
+    v:100, duration:3.4, ease:'power1.inOut',
+    onUpdate:()=>{
+      fill.style.width = obj.v + '%';
+      pct.textContent = Math.round(obj.v) + '%';
+      const idx = Math.min(stages.length-1, Math.floor(obj.v/25));
+      if(idx !== stageIdx){ stageIdx = idx; label.textContent = stages[idx]; }
+    },
+    onComplete:()=>{ label.textContent = 'Complete'; }
+  });
+}
+launchBtn.addEventListener('click', runProgressDemo);
+runBtn.addEventListener('click', runProgressDemo);
+
+/* ---------------- network / radar signature canvas ---------------- */
+const canvas = document.getElementById('networkCanvas');
+const ctx = canvas.getContext('2d');
+let W, H, DPR;
+
+function resize(){
+  DPR = window.devicePixelRatio || 1;
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+const CENTER = () => ({x: W/2, y: H/2});
+const NODE_COUNT = 22;
+let nodes = [];
+
+function initNodes(){
+  nodes = [];
+  for(let i=0;i<NODE_COUNT;i++){
+    const angle = Math.random()*Math.PI*2;
+    const radius = 40 + Math.random()*Math.min(W,H)*0.42;
+    nodes.push({
+      angle, radius,
+      speed: (Math.random()*0.15+0.04) * (Math.random()<0.5?1:-1),
+      r: 1.6 + Math.random()*2.2,
+      pulse: Math.random()*Math.PI*2,
+      hue: Math.random() < 0.6 ? 'primary' : 'signal'
+    });
+  }
+}
+initNodes();
+window.addEventListener('resize', initNodes);
+
+let t = 0;
+function draw(){
+  t += 0.016;
+  ctx.clearRect(0,0,W,H);
+  const c = CENTER();
+
+  // core
+  const coreGrad = ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,26);
+  coreGrad.addColorStop(0,'rgba(110,91,255,0.9)');
+  coreGrad.addColorStop(1,'rgba(110,91,255,0)');
+  ctx.fillStyle = coreGrad;
+  ctx.beginPath(); ctx.arc(c.x,c.y,26,0,Math.PI*2); ctx.fill();
+
+  ctx.fillStyle = '#e8eaf5';
+  ctx.beginPath(); ctx.arc(c.x,c.y,4,0,Math.PI*2); ctx.fill();
+
+  // sweep ring
+  const sweepAngle = (t*0.6) % (Math.PI*2);
+  const ringR = Math.min(W,H)*0.42;
+  const sweepGrad = ctx.createConicGradient ? ctx.createConicGradient(sweepAngle, c.x, c.y) : null;
+
+  // static rings
+  [0.22,0.32,0.42].forEach(f=>{
+    ctx.beginPath();
+    ctx.arc(c.x,c.y, Math.min(W,H)*f, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+
+  // sweep line
+  ctx.save();
+  ctx.translate(c.x,c.y);
+  ctx.rotate(sweepAngle);
+  const grad = ctx.createLinearGradient(0,0,ringR,0);
+  grad.addColorStop(0,'rgba(0,229,255,0.35)');
+  grad.addColorStop(1,'rgba(0,229,255,0)');
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(ringR,0); ctx.stroke();
+  ctx.restore();
+
+  // nodes + connecting lines
+  nodes.forEach(n=>{
+    n.angle += n.speed*0.02;
+    n.pulse += 0.05;
+    const x = c.x + Math.cos(n.angle)*n.radius;
+    const y = c.y + Math.sin(n.angle)*n.radius;
+    n._x = x; n._y = y;
+
+    ctx.beginPath();
+    ctx.moveTo(c.x,c.y);
+    ctx.lineTo(x,y);
+    ctx.strokeStyle = 'rgba(255,255,255,0.045)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    const glowSize = n.r + Math.sin(n.pulse)*0.6;
+    const col = n.hue==='primary' ? '110,91,255' : '0,229,255';
+    const g = ctx.createRadialGradient(x,y,0,x,y,glowSize*4);
+    g.addColorStop(0, `rgba(${col},0.9)`);
+    g.addColorStop(1, `rgba(${col},0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x,y,glowSize*4,0,Math.PI*2); ctx.fill();
+
+    ctx.fillStyle = `rgba(${col},1)`;
+    ctx.beginPath(); ctx.arc(x,y,glowSize,0,Math.PI*2); ctx.fill();
+  });
+
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>
